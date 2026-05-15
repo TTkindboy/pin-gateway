@@ -11,6 +11,11 @@ const SITES = {
     pinEnv: 'PIN_SITE_A',
     cookieName: 'auth_local',
   },
+  'pin-gateway-worker.taklipstein.workers.dev': {
+    origin: 'https://2048-lucas.pages.dev/',
+    pinEnv: 'PIN_SITE_A',
+    cookieName: 'auth_workers_dev',
+  },
   '2048.lucaslc.me': {
     origin: 'https://2048-lucas.pages.dev/',
     pinEnv: 'PIN_SITE_A',
