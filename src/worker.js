@@ -1,5 +1,3 @@
-const DEFAULT_AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 // one day
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url)
@@ -26,15 +24,23 @@ export default {
 }
 
 function getSite(env) {
-  if (!env.SITE_ORIGIN || !isValidOrigin(env.SITE_ORIGIN)) {
+  const cookieMaxAge = Number(env.AUTH_COOKIE_MAX_AGE)
+
+  if (
+    !env.SITE_ORIGIN ||
+    !isValidOrigin(env.SITE_ORIGIN) ||
+    !env.AUTH_COOKIE_NAME ||
+    !Number.isSafeInteger(cookieMaxAge) ||
+    cookieMaxAge <= 0
+  ) {
     return null
   }
 
   return {
     origin: env.SITE_ORIGIN,
     pin: env.SITE_PIN,
-    cookieName: env.AUTH_COOKIE_NAME || 'pin_gateway_auth',
-    cookieMaxAge: getCookieMaxAge(env.AUTH_COOKIE_MAX_AGE),
+    cookieName: env.AUTH_COOKIE_NAME,
+    cookieMaxAge,
   }
 }
 
@@ -132,15 +138,6 @@ function normalizePin(value) {
 
 function isLocalHostname(hostname) {
   return hostname === 'localhost' || hostname === '127.0.0.1'
-}
-
-function getCookieMaxAge(value) {
-  const maxAge = Number(value)
-  if (!Number.isSafeInteger(maxAge) || maxAge <= 0) {
-    return DEFAULT_AUTH_COOKIE_MAX_AGE
-  }
-
-  return maxAge
 }
 
 function isValidOrigin(origin) {

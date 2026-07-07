@@ -1,2 +1,30 @@
 [tools]
 pnpm = "latest"
+
+[tasks.dev]
+description = "Start the local Wrangler dev server"
+run = "pnpm dev"
+
+[tasks.lint]
+description = "Run ESLint"
+run = "pnpm lint"
+
+[tasks.build]
+description = "Run a Wrangler dry-run deploy"
+run = "WRANGLER_LOG_PATH=/tmp/pin-gateway-wrangler.log pnpm build"
+
+[tasks.check]
+description = "Run all verification checks"
+depends = ["lint", "build"]
+
+[tasks.deploy]
+description = "Deploy the Worker without deleting dashboard vars"
+run = "pnpm deploy"
+
+[tasks.secret-origin]
+description = "Set the SITE_ORIGIN Worker secret"
+run = "pnpm wrangler secret put SITE_ORIGIN"
+
+[tasks.secret-pin]
+description = "Set the SITE_PIN Worker secret"
+run = "pnpm wrangler secret put SITE_PIN"

@@ -8,6 +8,10 @@
     "directory": "./public",
     "not_found_handling": "single-page-application"
   },
+  "vars": {
+    "AUTH_COOKIE_NAME": "pin_gateway_auth",
+    "AUTH_COOKIE_MAX_AGE": "86400"
+  },
   "observability": {
     "enabled": true
   }
