@@ -10,7 +10,8 @@
   },
   "vars": {
     "AUTH_COOKIE_NAME": "pin_gateway_auth",
-    "AUTH_COOKIE_MAX_AGE": "86400"
+    "AUTH_COOKIE_MAX_AGE": "86400",
+    "SECONDARY_SITE_PATH": "/web"
   },
   "observability": {
     "enabled": true

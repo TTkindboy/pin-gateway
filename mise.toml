@@ -25,6 +25,10 @@ run = "pnpm deploy"
 description = "Set the SITE_ORIGIN Worker secret"
 run = "pnpm wrangler secret put SITE_ORIGIN"
 
+[tasks.secret-secondary-origin]
+description = "Set the SECONDARY_SITE_ORIGIN Worker secret"
+run = "pnpm wrangler secret put SECONDARY_SITE_ORIGIN"
+
 [tasks.secret-pin]
 description = "Set the SITE_PIN Worker secret"
 run = "pnpm wrangler secret put SITE_PIN"

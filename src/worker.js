@@ -1,7 +1,7 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url)
-    const site = getSite(env)
+    const site = getSite(env, url)
 
     if (!site) {
       return new Response('Missing site configuration', { status: 500 })
@@ -12,23 +12,23 @@ export default {
     }
 
     if (hasAuthCookie(request, site.cookieName)) {
-      return proxyToOrigin(request, site.origin)
+      return proxyToOrigin(request, site)
     }
 
     if (request.method === 'POST' && url.pathname === '/unlock') {
       return handleUnlock(request, env, site, url)
     }
 
-    return showPinScreen(request, env, url)
+    return showPinScreen(request, env)
   },
 }
 
-function getSite(env) {
+function getSite(env, url) {
   const cookieMaxAge = Number(env.AUTH_COOKIE_MAX_AGE)
+  const route = getOriginRoute(env, url)
 
   if (
-    !env.SITE_ORIGIN ||
-    !isValidOrigin(env.SITE_ORIGIN) ||
+    !route ||
     !env.AUTH_COOKIE_NAME ||
     !Number.isSafeInteger(cookieMaxAge) ||
     cookieMaxAge <= 0
@@ -37,11 +37,29 @@ function getSite(env) {
   }
 
   return {
-    origin: env.SITE_ORIGIN,
+    ...route,
     pin: env.SITE_PIN,
     cookieName: env.AUTH_COOKIE_NAME,
     cookieMaxAge,
   }
+}
+
+function getOriginRoute(env, url) {
+  const secondaryPath = normalizePathPrefix(env.SECONDARY_SITE_PATH)
+
+  if (secondaryPath && isPathWithinPrefix(url.pathname, secondaryPath)) {
+    return getRoute(env.SECONDARY_SITE_ORIGIN, secondaryPath)
+  }
+
+  return getRoute(env.SITE_ORIGIN, '')
+}
+
+function getRoute(origin, stripPrefix) {
+  if (!origin || !isValidOrigin(origin)) {
+    return null
+  }
+
+  return { origin, stripPrefix }
 }
 
 async function handleUnlock(request, env, site, url) {
@@ -59,41 +77,40 @@ async function handleUnlock(request, env, site, url) {
     if (wantsJson) {
       return Response.json({ ok: false }, { status: 401 })
     }
-    return Response.redirect(new URL(`/pin?next=${encodeURIComponent(getNextPath(url))}&error=1`, url), 303)
+    return Response.redirect(new URL('/?error=1', url), 303)
   }
 
-  const location = getSafeNextPath(form.get('next')) || '/'
   const headers = {
     'Set-Cookie': serializeAuthCookie(site.cookieName, url.hostname, site.cookieMaxAge),
   }
 
   if (wantsJson) {
-    return Response.json({ ok: true, location }, { headers })
+    return Response.json({ ok: true, location: '/' }, { headers })
   }
 
   return new Response(null, {
     status: 303,
     headers: {
-      Location: location,
+      Location: '/',
       ...headers,
     },
   })
 }
 
-function showPinScreen(request, env, originalUrl) {
+function showPinScreen(request, env) {
   const url = new URL(request.url)
   url.pathname = '/pin.html'
-  url.searchParams.set('next', getNextPath(originalUrl))
   return env.ASSETS.fetch(new Request(url, request))
 }
 
-function proxyToOrigin(request, origin) {
+function proxyToOrigin(request, site) {
   const requestUrl = new URL(request.url)
-  const originUrl = new URL(origin)
+  const originUrl = new URL(site.origin)
 
   requestUrl.protocol = originUrl.protocol
   requestUrl.hostname = originUrl.hostname
   requestUrl.port = originUrl.port
+  requestUrl.pathname = stripPathPrefix(requestUrl.pathname, site.stripPrefix)
 
   const headers = new Headers(request.headers)
   headers.delete('Host') // clean host header
@@ -143,20 +160,25 @@ function isLocalHostname(hostname) {
   return hostname === 'localhost' || hostname === '127.0.0.1'
 }
 
-function getNextPath(url) {
-  return `${url.pathname}${url.search}`
+function isPathWithinPrefix(pathname, prefix) {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`)
 }
 
-function getSafeNextPath(value) {
-  if (typeof value !== 'string' || !value.startsWith('/')) {
+function normalizePathPrefix(value) {
+  if (typeof value !== 'string' || !value.startsWith('/') || value === '/') {
     return null
   }
 
-  if (value.startsWith('//')) {
-    return null
+  return value.endsWith('/') ? value.slice(0, -1) : value
+}
+
+function stripPathPrefix(pathname, prefix) {
+  if (!prefix || !pathname.startsWith(prefix)) {
+    return pathname
   }
 
-  return value
+  const nextPathname = pathname.slice(prefix.length)
+  return nextPathname || '/'
 }
 
 function isValidOrigin(origin) {
