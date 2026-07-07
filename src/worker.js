@@ -19,7 +19,7 @@ export default {
       return handleUnlock(request, env, site, url)
     }
 
-    return showPinScreen(request, env)
+    return showPinScreen(request, env, url)
   },
 }
 
@@ -59,29 +59,31 @@ async function handleUnlock(request, env, site, url) {
     if (wantsJson) {
       return Response.json({ ok: false }, { status: 401 })
     }
-    return Response.redirect(new URL('/?error=1', url), 303)
+    return Response.redirect(new URL(`/pin?next=${encodeURIComponent(getNextPath(url))}&error=1`, url), 303)
   }
 
+  const location = getSafeNextPath(form.get('next')) || '/'
   const headers = {
     'Set-Cookie': serializeAuthCookie(site.cookieName, url.hostname, site.cookieMaxAge),
   }
 
   if (wantsJson) {
-    return Response.json({ ok: true, location: '/' }, { headers })
+    return Response.json({ ok: true, location }, { headers })
   }
 
   return new Response(null, {
     status: 303,
     headers: {
-      Location: '/',
+      Location: location,
       ...headers,
     },
   })
 }
 
-function showPinScreen(request, env) {
+function showPinScreen(request, env, originalUrl) {
   const url = new URL(request.url)
   url.pathname = '/pin.html'
+  url.searchParams.set('next', getNextPath(originalUrl))
   return env.ASSETS.fetch(new Request(url, request))
 }
 
@@ -139,6 +141,22 @@ function normalizePin(value) {
 
 function isLocalHostname(hostname) {
   return hostname === 'localhost' || hostname === '127.0.0.1'
+}
+
+function getNextPath(url) {
+  return `${url.pathname}${url.search}`
+}
+
+function getSafeNextPath(value) {
+  if (typeof value !== 'string' || !value.startsWith('/')) {
+    return null
+  }
+
+  if (value.startsWith('//')) {
+    return null
+  }
+
+  return value
 }
 
 function isValidOrigin(origin) {

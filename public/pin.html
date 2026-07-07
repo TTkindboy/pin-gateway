@@ -151,6 +151,7 @@
 
     <script type="text/babel">
       const CODE_LENGTH = 3;
+      const nextPath = new URLSearchParams(window.location.search).get("next") || "/";
 
       function CodeScreen() {
         const [digits, setDigits] = React.useState(() => Array(CODE_LENGTH).fill(""));
@@ -184,7 +185,7 @@
                 "Accept": "application/json",
                 "Content-Type": "application/x-www-form-urlencoded",
               },
-              body: new URLSearchParams({ pin: value }),
+              body: new URLSearchParams({ pin: value, next: nextPath }),
             });
             const result = await response.json().catch(() => null);
 
