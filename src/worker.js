@@ -94,6 +94,7 @@ function proxyToOrigin(request, origin) {
   requestUrl.port = originUrl.port
 
   const headers = new Headers(request.headers)
+  headers.delete('Host') // clean host header
 
   const init = {
     method: request.method,
