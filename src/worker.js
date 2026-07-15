@@ -66,7 +66,7 @@ async function handleUnlock(request, env, site, url) {
   const expectedPin = site.pin
 
   if (!expectedPin) {
-    return new Response('Missing secret: SITE_PIN', { status: 500 })
+    return new Response('Missing site configuration', { status: 500 })
   }
 
   const form = await request.formData()
@@ -125,7 +125,9 @@ function proxyToOrigin(request, site) {
     init.body = request.body
   }
 
-  return fetch(new Request(requestUrl, init))
+  return fetch(new Request(requestUrl, init)).catch(() => {
+    return new Response('Origin unreachable', { status: 502 })
+  })
 }
 
 function hasAuthCookie(request, cookieName) {
@@ -141,15 +143,13 @@ function serializeAuthCookie(cookieName, hostname, maxAge) {
   return `${cookieName}=1; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=${maxAge}`
 }
 
+const STATIC_ASSET_PATHS = new Set(['/pin', '/pin.html', '/favicon.ico', '/robots.txt'])
+
 function isStaticAsset(url) {
-  return (
-    url.pathname === '/pin' ||
-    url.pathname === '/pin.html' ||
-    url.pathname === '/favicon.ico' ||
-    url.pathname === '/robots.txt'
-  )
+  return STATIC_ASSET_PATHS.has(url.pathname)
 }
 
+// Must stay in sync with the character-normalization logic in public/pin.html.
 function normalizePin(value) {
   return String(value || '')
     .toUpperCase()
